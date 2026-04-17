@@ -5,16 +5,13 @@ import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   try {
-    // Инициализация със защита за Web/IDX
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
     debugPrint("Firebase init check: $e");
   }
-
   runApp(const ASHubApp());
 }
 
@@ -113,73 +110,125 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'ВХОД',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w100,
-                  color: Color(0xFFD4AF37),
-                  letterSpacing: 10,
+        child: SingleChildScrollView(
+          // Добавяме скрол, за да не пречи клавиатурата
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 80),
+                const Text(
+                  'ВХОД',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w100,
+                    color: Color(0xFFD4AF37),
+                    letterSpacing: 10,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 60),
-              _authButton(
-                label: 'Вход с Google',
-                icon: Icons.g_mobiledata,
-                onPressed: () => debugPrint("Google Login Clicked"),
-              ),
-              const SizedBox(height: 20),
-              _authButton(
-                label: 'Вход с Apple',
-                icon: Icons.apple,
-                onPressed: () => debugPrint("Apple Login Clicked"),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                'PREMIUM ACCESS ONLY',
-                style: TextStyle(
-                  color: Colors.white24,
-                  fontSize: 10,
-                  letterSpacing: 2,
+                const SizedBox(height: 50),
+
+                // Поле за Имейл
+                _textField(
+                  controller: _emailController,
+                  hint: 'Имейл адрес',
+                  icon: Icons.email_outlined,
                 ),
-              ),
-            ],
+                const SizedBox(height: 15),
+
+                // Поле за Парола
+                _textField(
+                  controller: _passwordController,
+                  hint: 'Парола',
+                  icon: Icons.lock_outline,
+                  isPassword: true,
+                ),
+                const SizedBox(height: 25),
+
+                // Бутон за Вход с Имейл
+                _mainButton(
+                  label: 'ВЛЕЗ',
+                  onPressed: () =>
+                      debugPrint("Email Login: ${_emailController.text}"),
+                ),
+
+                const SizedBox(height: 30),
+                const Text("или", style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 30),
+
+                // Социални бутони
+                _socialButton(
+                  label: 'Вход с Google',
+                  icon: Icons.g_mobiledata,
+                  onPressed: () => debugPrint("Google Login Clicked"),
+                ),
+                const SizedBox(height: 15),
+                _socialButton(
+                  label: 'Вход с Apple',
+                  icon: Icons.apple,
+                  onPressed: () => debugPrint("Apple Login Clicked"),
+                ),
+
+                const SizedBox(height: 50),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _authButton({
-    required String label,
+  // Дизайн за текстовите полета
+  Widget _textField({
+    required TextEditingController controller,
+    required String hint,
     required IconData icon,
-    required VoidCallback onPressed,
+    bool isPassword = false,
   }) {
+    return TextField(
+      controller: controller,
+      obscureText: isPassword,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: const Color(0xFFD4AF37), size: 20),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white24, fontSize: 14),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.white10),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 0.5),
+        ),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.05),
+      ),
+    );
+  }
+
+  // Основен златен бутон
+  Widget _mainButton({required String label, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
       height: 55,
-      child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.black, size: 28),
-        label: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
+      child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFD4AF37),
@@ -187,6 +236,41 @@ class LoginScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 0,
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            letterSpacing: 2,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Стилизирани социални бутони (с контур)
+  Widget _socialButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: OutlinedButton.icon(
+        icon: Icon(icon, color: Colors.white, size: 24),
+        label: Text(
+          label,
+          style: const TextStyle(color: Colors.white, fontSize: 15),
+        ),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Colors.white10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
