@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281627900338",
+    "project_id": "ashub-7fc0f",
+    "storage_bucket": "ashub-7fc0f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281627900338:android:a3225be58f25d25dae0cab",
+        "android_client_info": {
+          "package_name": "com.example.ashub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_PIdv_nxf2eDn7eYc8NLEGT_0PX73wQM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

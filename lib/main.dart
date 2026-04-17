@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'dart:async';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ASHubApp());
 }
 
@@ -16,6 +20,7 @@ class ASHubApp extends StatelessWidget {
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
+        colorScheme: const ColorScheme.dark(primary: Color(0xFFD4AF37)),
       ),
       home: const SplashScreen(),
     );
@@ -29,7 +34,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -38,16 +44,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500), // Време за изплуване
+      duration: const Duration(milliseconds: 2500),
     );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
-
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
     _controller.forward();
-
-    // Преход към входния екран след 4 секунди
     Timer(const Duration(seconds: 4), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -72,14 +75,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Тук извикваме твоето лого
               Image.asset(
                 'assets/logo.png',
                 width: 200,
-                errorBuilder: (context, error, stackTrace) {
-                  // Ако логото липсва, показваме златен символ за резерва
-                  return const Icon(Icons.stars, color: Color(0xFFD4AF37), size: 100);
-                },
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.stars,
+                  color: Color(0xFFD4AF37),
+                  size: 100,
+                ),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -105,35 +108,63 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(30.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'ДОБРЕ ДОШЛИ',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w200, letterSpacing: 2),
-            ),
-            const SizedBox(height: 50),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Имейл',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'ВХОД',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w100,
+                  color: Color(0xFFD4AF37),
+                  letterSpacing: 8,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Тук ще свържем Firebase
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFD4AF37),
-                foregroundColor: Colors.black,
-                minimumSize: const Size(double.infinity, 50),
+              const SizedBox(height: 60),
+              _authButton(
+                label: 'Вход с Google',
+                icon: Icons.login,
+                onPressed: () {},
               ),
-              child: const Text('ВХОД'),
-            ),
-          ],
+              const SizedBox(height: 20),
+              _authButton(
+                label: 'Вход с Apple',
+                icon: Icons.apple,
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _authButton({
+    required String label,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton.icon(
+        icon: Icon(icon, color: Colors.black),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFD4AF37),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
       ),
     );
