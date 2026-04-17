@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
 import 'dart:async';
 
@@ -120,13 +122,50 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Функция за вход/регистрация с Имейл
+  Future<void> _signInWithEmail() async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      debugPrint("Успешен вход!");
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        // Ако няма такъв потребител, го регистрираме автоматично за теста
+        await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      } else {
+        debugPrint("Грешка: ${e.message}");
+      }
+    }
+  }
+
+  // Функция за вход с Google
+  Future<void> _signInWithGoogle() async {
+    try {
+      GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
+      AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth?.accessToken,
+        idToken: googleAuth?.idToken,
+      );
+      await _auth.signInWithCredential(credential);
+      debugPrint("Успешен вход с Google!");
+    } catch (e) {
+      debugPrint("Грешка при Google вход: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          // Добавяме скрол, за да не пречи клавиатурата
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30.0),
             child: Column(
@@ -143,16 +182,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 50),
-
-                // Поле за Имейл
                 _textField(
                   controller: _emailController,
                   hint: 'Имейл адрес',
                   icon: Icons.email_outlined,
                 ),
                 const SizedBox(height: 15),
-
-                // Поле за Парола
                 _textField(
                   controller: _passwordController,
                   hint: 'Парола',
@@ -160,31 +195,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   isPassword: true,
                 ),
                 const SizedBox(height: 25),
-
-                // Бутон за Вход с Имейл
-                _mainButton(
-                  label: 'ВЛЕЗ',
-                  onPressed: () =>
-                      debugPrint("Email Login: ${_emailController.text}"),
-                ),
-
+                _mainButton(label: 'ВЛЕЗ', onPressed: _signInWithEmail),
                 const SizedBox(height: 30),
                 const Text("или", style: TextStyle(color: Colors.grey)),
                 const SizedBox(height: 30),
-
-                // Социални бутони
                 _socialButton(
                   label: 'Вход с Google',
                   icon: Icons.g_mobiledata,
-                  onPressed: () => debugPrint("Google Login Clicked"),
+                  onPressed: _signInWithGoogle,
                 ),
                 const SizedBox(height: 15),
                 _socialButton(
                   label: 'Вход с Apple',
                   icon: Icons.apple,
-                  onPressed: () => debugPrint("Apple Login Clicked"),
+                  onPressed: () {},
                 ),
-
                 const SizedBox(height: 50),
               ],
             ),
@@ -194,7 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Дизайн за текстовите полета
   Widget _textField({
     required TextEditingController controller,
     required String hint,
@@ -223,7 +247,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Основен златен бутон
   Widget _mainButton({required String label, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
@@ -235,7 +258,6 @@ class _LoginScreenState extends State<LoginScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 0,
         ),
         child: Text(
           label,
@@ -250,7 +272,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Стилизирани социални бутони (с контур)
   Widget _socialButton({
     required String label,
     required IconData icon,
