@@ -5,7 +5,16 @@ import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  try {
+    // Инициализация със защита за Web/IDX
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase init check: $e");
+  }
+
   runApp(const ASHubApp());
 }
 
@@ -21,6 +30,7 @@ class ASHubApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
         colorScheme: const ColorScheme.dark(primary: Color(0xFFD4AF37)),
+        useMaterial3: true,
       ),
       home: const SplashScreen(),
     );
@@ -51,6 +61,7 @@ class _SplashScreenState extends State<SplashScreen>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
     _controller.forward();
+
     Timer(const Duration(seconds: 4), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -89,9 +100,9 @@ class _SplashScreenState extends State<SplashScreen>
                 'ASHUB',
                 style: TextStyle(
                   color: Color(0xFFD4AF37),
-                  fontSize: 24,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 4,
+                  letterSpacing: 6,
                 ),
               ),
             ],
@@ -120,20 +131,29 @@ class LoginScreen extends StatelessWidget {
                   fontSize: 32,
                   fontWeight: FontWeight.w100,
                   color: Color(0xFFD4AF37),
-                  letterSpacing: 8,
+                  letterSpacing: 10,
                 ),
               ),
               const SizedBox(height: 60),
               _authButton(
                 label: 'Вход с Google',
-                icon: Icons.login,
-                onPressed: () {},
+                icon: Icons.g_mobiledata,
+                onPressed: () => debugPrint("Google Login Clicked"),
               ),
               const SizedBox(height: 20),
               _authButton(
                 label: 'Вход с Apple',
                 icon: Icons.apple,
-                onPressed: () {},
+                onPressed: () => debugPrint("Apple Login Clicked"),
+              ),
+              const SizedBox(height: 40),
+              const Text(
+                'PREMIUM ACCESS ONLY',
+                style: TextStyle(
+                  color: Colors.white24,
+                  fontSize: 10,
+                  letterSpacing: 2,
+                ),
               ),
             ],
           ),
@@ -151,20 +171,22 @@ class LoginScreen extends StatelessWidget {
       width: double.infinity,
       height: 55,
       child: ElevatedButton.icon(
-        icon: Icon(icon, color: Colors.black),
+        icon: Icon(icon, color: Colors.black, size: 28),
         label: Text(
           label,
           style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
+            fontSize: 16,
           ),
         ),
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFD4AF37),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(12),
           ),
+          elevation: 0,
         ),
       ),
     );
