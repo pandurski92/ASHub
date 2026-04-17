@@ -31,11 +31,24 @@ class ASHubApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(primary: Color(0xFFD4AF37)),
         useMaterial3: true,
       ),
-      home: const SplashScreen(),
+      // Използваме StreamBuilder, за да превключваме автоматично между Login и Home
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SplashScreen();
+          }
+          if (snapshot.hasData) {
+            return const HomeScreen();
+          }
+          return const SplashScreen(); // Първо минава през Splash, после отива в Login
+        },
+      ),
     );
   }
 }
 
+// --- SPLASH SCREEN ---
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -62,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     Timer(const Duration(seconds: 4), () {
-      if (mounted) {
+      if (mounted && FirebaseAuth.instance.currentUser == null) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
         );
@@ -85,15 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset(
-                'assets/logo.png',
-                width: 200,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.stars,
-                  color: Color(0xFFD4AF37),
-                  size: 100,
-                ),
-              ),
+              const Icon(Icons.stars, color: Color(0xFFD4AF37), size: 100),
               const SizedBox(height: 20),
               const Text(
                 'ASHUB',
@@ -112,6 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
+// --- LOGIN SCREEN ---
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -122,42 +128,41 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Функция за вход/регистрация с Имейл
   Future<void> _signInWithEmail() async {
     try {
-      await _auth.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      debugPrint("Успешен вход!");
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        // Ако няма такъв потребител, го регистрираме автоматично за теста
-        await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-      } else {
-        debugPrint("Грешка: ${e.message}");
+      if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+        try {
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+        } catch (err) {
+          debugPrint("Грешка при регистрация: $err");
+        }
       }
     }
   }
 
-  // Функция за вход с Google
   Future<void> _signInWithGoogle() async {
     try {
-      GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
-      AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
-      );
-      await _auth.signInWithCredential(credential);
-      debugPrint("Успешен вход с Google!");
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAuthentication? googleAuth =
+          await googleUser?.authentication;
+      if (googleAuth != null) {
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await FirebaseAuth.instance.signInWithCredential(credential);
+      }
     } catch (e) {
-      debugPrint("Грешка при Google вход: $e");
+      debugPrint("Google error: $e");
     }
   }
 
@@ -169,47 +174,33 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 30.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 80),
                 const Text(
                   'ВХОД',
                   style: TextStyle(
                     fontSize: 32,
-                    fontWeight: FontWeight.w100,
                     color: Color(0xFFD4AF37),
                     letterSpacing: 10,
                   ),
                 ),
                 const SizedBox(height: 50),
                 _textField(
-                  controller: _emailController,
-                  hint: 'Имейл адрес',
-                  icon: Icons.email_outlined,
+                  _emailController,
+                  'Имейл адрес',
+                  Icons.email_outlined,
                 ),
                 const SizedBox(height: 15),
                 _textField(
-                  controller: _passwordController,
-                  hint: 'Парола',
-                  icon: Icons.lock_outline,
+                  _passwordController,
+                  'Парола',
+                  Icons.lock_outline,
                   isPassword: true,
                 ),
                 const SizedBox(height: 25),
-                _mainButton(label: 'ВЛЕЗ', onPressed: _signInWithEmail),
-                const SizedBox(height: 30),
-                const Text("или", style: TextStyle(color: Colors.grey)),
-                const SizedBox(height: 30),
-                _socialButton(
-                  label: 'Вход с Google',
-                  icon: Icons.g_mobiledata,
-                  onPressed: _signInWithGoogle,
-                ),
-                const SizedBox(height: 15),
-                _socialButton(
-                  label: 'Вход с Apple',
-                  icon: Icons.apple,
-                  onPressed: () {},
-                ),
+                _btn('ВЛЕЗ', _signInWithEmail, isMain: true),
+                const SizedBox(height: 20),
+                _btn('Вход с Google', _signInWithGoogle),
                 const SizedBox(height: 50),
               ],
             ),
@@ -219,79 +210,74 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _textField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
+  Widget _textField(
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
     bool isPassword = false,
   }) {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: const Color(0xFFD4AF37), size: 20),
+        prefixIcon: Icon(icon, color: const Color(0xFFD4AF37)),
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 14),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white10),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFD4AF37), width: 0.5),
-        ),
         filled: true,
         fillColor: Colors.white.withOpacity(0.05),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  Widget _mainButton({required String label, required VoidCallback onPressed}) {
+  Widget _btn(String label, VoidCallback action, {bool isMain = false}) {
     return SizedBox(
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: action,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFD4AF37),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          backgroundColor: isMain
+              ? const Color(0xFFD4AF37)
+              : Colors.transparent,
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            letterSpacing: 2,
-          ),
+          style: TextStyle(color: isMain ? Colors.black : Colors.white),
         ),
       ),
     );
   }
+}
 
-  Widget _socialButton({
-    required String label,
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 55,
-      child: OutlinedButton.icon(
-        icon: Icon(icon, color: Colors.white, size: 24),
-        label: Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 15),
-        ),
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.white10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+// --- HOME SCREEN (НОВИЯТ ЕКРАН) ---
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ASHUB PREMIUM'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () => FirebaseAuth.instance.signOut(),
           ),
+        ],
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.verified_user, size: 80, color: Color(0xFFD4AF37)),
+            const SizedBox(height: 20),
+            Text('Добре дошъл,', style: TextStyle(color: Colors.grey[400])),
+            Text(
+              user?.email ?? 'Потребител',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );
