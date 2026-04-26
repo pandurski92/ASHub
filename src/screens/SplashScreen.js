@@ -1,32 +1,40 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Modal, Switch } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
+import { View, StatusBar } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 
-export default function SettingsModal({ visible, onClose, isDarkMode, setIsDarkMode, styles, colors }) {
+export default function SplashScreen({ setStage }) {
+  useEffect(() => {
+    // Fallback: ако видеото не се зареди за 5 секунди, преминаваме към login
+    const timeout = setTimeout(() => {
+      setStage('login');
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, []);
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Настройки</Text>
-            <TouchableOpacity onPress={onClose}>
-              <MaterialCommunityIcons name="close" size={28} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.settingRow}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialCommunityIcons name="theme-light-dark" size={24} color={colors.text} style={{ marginRight: 10 }} />
-              <Text style={styles.settingText}>Тъмна тема</Text>
-            </View>
-            <Switch 
-              value={isDarkMode} 
-              onValueChange={setIsDarkMode} 
-              trackColor={{ false: "#767577", true: "#34C759" }}
-              thumbColor={isDarkMode ? "#FFF" : "#f4f3f4"}
-            />
-          </View>
-        </View>
-      </View>
-    </Modal>
+    <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }}>
+      <StatusBar hidden />
+      <Video
+        source={require('../../assets/intro.mp4')}
+        style={{ width: '100%', height: '100%' }}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping={false}
+        onPlaybackStatusUpdate={(status) => {
+          if (status && status.didJustFinish) {
+            setStage('login');
+          }
+        }}
+        onError={(error) => {
+          console.warn('Video error:', error);
+          setStage('login');
+        }}
+      />
+    </View>
+  );
+}
+        }}
+      />
+    </View>
   );
 }
