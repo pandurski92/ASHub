@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { StyleSheet, StatusBar, useWindowDimensions, Platform, View } from 'react-native';
+import { StyleSheet, StatusBar, useWindowDimensions, Platform, View, KeyboardAvoidingView, ScrollView } from 'react-native';
 import SplashScreen from './src/screens/SplashScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
